@@ -51,7 +51,7 @@ public class ServerGUI extends JFrame {
         setJMenuBar(menuBar);
 
         setBounds(100, 100, 800, 350);
-        setMinimumSize(new Dimension(800, 400));
+        setMinimumSize(new Dimension(800, 550));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         getContentPane().setLayout(null);
 
@@ -61,16 +61,16 @@ public class ServerGUI extends JFrame {
 
         textArea = new JTextArea();
         JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setBounds(10, 40, 420, 150);
+        scrollPane.setBounds(10, 40, 420, 200);
         getContentPane().add(scrollPane);
 
         JLabel logLabel = new JLabel("日志信息");
-        logLabel.setBounds(10, 200, 120, 20);
+        logLabel.setBounds(10, 250, 120, 20);
         getContentPane().add(logLabel);
 
         logArea = new JTextArea();
         JScrollPane logScrollPane = new JScrollPane(logArea);
-        logScrollPane.setBounds(10, 230, 420, 100);
+        logScrollPane.setBounds(10, 270, 420, 200);
         getContentPane().add(logScrollPane);
 
         JLabel portLabel = new JLabel("端口号修改");
