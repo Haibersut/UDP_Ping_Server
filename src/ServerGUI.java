@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.io.File;
@@ -29,6 +30,8 @@ public class ServerGUI extends JFrame {
     private JTextField lossRateField;
     private JButton changeLossRateButton;
     private AtomicInteger atomicLossRate;
+    private JTable statsTable;
+    private DefaultTableModel statsTableModel;
     public ServerGUI(int port) {
         super("UDP Ping 服务端");
 
@@ -156,6 +159,16 @@ public class ServerGUI extends JFrame {
         });
         getContentPane().add(changeDelayButton);
 
+        JLabel statisticLabel = new JLabel("统计信息");
+        statisticLabel.setBounds(450, 250, 120, 20);
+        getContentPane().add(statisticLabel);
+
+        statsTableModel = new DefaultTableModel(new Object[][]{}, new String[]{"IP地址", "已延迟数", "已丢弃数"});
+        statsTable = new JTable(statsTableModel);
+        JScrollPane statsScrollPane = new JScrollPane(statsTable);
+        statsScrollPane.setBounds(450, 270, 300, 200);
+        getContentPane().add(statsScrollPane);
+
         serverInfoLabel = new JLabel("服务器地址: " + getLocalAddress() + "    当前监听端口: " + getPort());
         serverInfoLabel.setBounds(450, 10, 300, 20);
         getContentPane().add(serverInfoLabel);
@@ -225,6 +238,19 @@ public class ServerGUI extends JFrame {
             ErrorDialog.showError("无法获取当前主机地址: " + e.getMessage());
             return "无法获取当前主机地址";
         }
+    }
+
+    public void updateStatsTable(String ip, int delayCount, int dropCount) {
+        SwingUtilities.invokeLater(() -> {
+            for (int i = 0; i < statsTableModel.getRowCount(); i++) {
+                if (statsTableModel.getValueAt(i, 0).equals(ip)) {
+                    statsTableModel.setValueAt(delayCount, i, 1);
+                    statsTableModel.setValueAt(dropCount, i, 2);
+                    return;
+                }
+            }
+            statsTableModel.addRow(new Object[]{ip, delayCount, dropCount});
+        });
     }
 }
 

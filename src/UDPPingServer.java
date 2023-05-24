@@ -12,13 +12,14 @@ import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 
 public class UDPPingServer {
-
     private ServerGUI gui;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Random random = new Random();
     private AtomicInteger delay = new AtomicInteger();
     private AtomicBoolean running;
     private AtomicInteger messageNumber = new AtomicInteger(1);
+    private ConcurrentHashMap<String, Statistic> statistics = new ConcurrentHashMap<>();
+
     public UDPPingServer(int port) {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
@@ -31,12 +32,27 @@ public class UDPPingServer {
     }
 
     public void start() {
+        DatagramSocket socket = null;
         while (running.get()) {
-            try (DatagramSocket socket = new DatagramSocket(gui.getPort())) {
+            if (socket == null || socket.getLocalPort() != gui.getPort()) {
+                if (socket != null) {
+                    socket.close();
+                }
+                try {
+                    socket = new DatagramSocket(gui.getPort());
+                } catch (SocketException e) {
+                    ErrorDialog.showError("服务器启动错误: " + e.getMessage());
+                    continue;
+                }
+            }
+            try {
                 receiveAndHandlePackets(socket);
             } catch (Exception e) {
-                ErrorDialog.showError("服务器启动错误: " + e.getMessage());
+                ErrorDialog.showError("接收和处理数据包错误: " + e.getMessage());
             }
+        }
+        if (socket != null) {
+            socket.close();
         }
     }
 
@@ -56,7 +72,7 @@ public class UDPPingServer {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-
+            updateGUI();
             executor.execute(() -> handlePacket(socket, packet));
         }
     }
@@ -66,6 +82,7 @@ public class UDPPingServer {
         if (random.nextInt(100) < rate) {
             String packetContent = new String(packet.getData(), packet.getOffset(), packet.getLength());
             gui.appendLog("模拟丢失该数据包，数据包内容如下：" + packetContent);
+            statistics.computeIfAbsent(packet.getAddress().getHostAddress(), Statistic::new).incrementDropCount();
             return true;
         }
         return false;
@@ -76,6 +93,7 @@ public class UDPPingServer {
             TimeUnit.MILLISECONDS.sleep(delay.get()); // 使用 AtomicInteger 的 get 方法获取延迟时间
             String packetContent = new String(packet.getData(), packet.getOffset(), packet.getLength());
             gui.appendLog("延迟该数据包" + delay.get() + " ms，数据包内容如下：" + packetContent);
+            statistics.computeIfAbsent(packet.getAddress().getHostAddress(), Statistic::new).incrementDelayCount();
         }
     }
 
@@ -94,20 +112,28 @@ public class UDPPingServer {
         try {
             String content = new String(packet.getData(), packet.getOffset(), packet.getLength());
             Map<String, String> map = parsePayload(content);
-
+            statistics.computeIfAbsent(packet.getAddress().getHostAddress(), Statistic::new);
             String headerInfo = "源端口: " + packet.getPort() + ", 目标端口: " + socket.getLocalPort()
                     + ", 长度: " + packet.getLength() + ", 地址: " + packet.getAddress().getHostAddress();
             String message = "第 " + messageNumber.getAndIncrement() + " 条消息\n收到来自 " + packet.getAddress().getHostAddress()
                     + " 地址的消息\n头部信息为："
-                    + headerInfo + "\n有效负载为：" + map.toString() + "\n";
+                    + headerInfo + "\n有效负载为：" + map + "\n";
             gui.appendMessage(message);
 
             // 发送响应
-            byte[] responseBytes = ("回复: " + map.toString()).getBytes();
+            byte[] responseBytes = ("回复: " + map).getBytes();
             DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length, packet.getAddress(), packet.getPort());
             socket.send(responsePacket);
         } catch (Exception e) {
             ErrorDialog.showError("处理数据包错误: " + e.getMessage());
+        }
+    }
+
+    private void updateGUI() {
+        for (Map.Entry<String, Statistic> entry : statistics.entrySet()) {
+            String ip = entry.getKey();
+            Statistic stat = entry.getValue();
+            gui.updateStatsTable(ip, stat.getDelayCount(), stat.getDropCount());
         }
     }
 
@@ -120,14 +146,6 @@ public class UDPPingServer {
         }
         UDPPingServer server = new UDPPingServer(port);
         server.start();
-        while (true) {
-            if (server.gui.getPort() != port) {
-                server.running.set(false);
-                port = server.gui.getPort();
-                server = new UDPPingServer(port);
-                server.start();
-            }
-        }
     }
 }
 
