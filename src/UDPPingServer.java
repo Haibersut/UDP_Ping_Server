@@ -18,7 +18,6 @@ public class UDPPingServer {
     private ServerGUI gui;
     private final ExecutorService executor;
     private final Random random = new Random();
-    private AtomicInteger delay = new AtomicInteger();
     private AtomicBoolean running;
     private AtomicInteger messageNumber = new AtomicInteger(1);
     private ConcurrentHashMap<String, Statistic> statistics = new ConcurrentHashMap<>();
@@ -33,7 +32,6 @@ public class UDPPingServer {
             ErrorDialog.showError("Failed to initialize LaF");
         }
         gui = new ServerGUI(port);
-        this.delay.set(gui.getDelayTime());
         running = new AtomicBoolean(true);
     }
 
@@ -125,9 +123,9 @@ public class UDPPingServer {
 
     private void simulatePacketDelay(DatagramPacket packet) throws InterruptedException {
         if (gui.getDelay()) {
-            TimeUnit.MILLISECONDS.sleep(delay.get());
+            TimeUnit.MILLISECONDS.sleep(gui.getDelayTime());
             String packetContent = new String(packet.getData(), packet.getOffset(), packet.getLength());
-            gui.appendLog("延迟该数据包" + delay.get() + " ms，数据包内容如下：" + packetContent);
+            gui.appendLog("延迟该数据包" + gui.getDelayTime() + " ms，数据包内容如下：" + packetContent);
             statistics.computeIfAbsent(packet.getAddress().getHostAddress(), Statistic::new).incrementDelayCount();
             updateGUI();
         }
