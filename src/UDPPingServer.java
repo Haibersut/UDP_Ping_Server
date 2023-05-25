@@ -123,9 +123,13 @@ public class UDPPingServer {
 
     private void simulatePacketDelay(DatagramPacket packet) throws InterruptedException {
         if (gui.getDelay()) {
-            TimeUnit.MILLISECONDS.sleep(gui.getDelayTime());
+            int delayTime = gui.getDelayTime();
+            if (delayTime == -1) {
+                delayTime = random.nextInt(1000);
+            }
+            TimeUnit.MILLISECONDS.sleep(delayTime);
             String packetContent = new String(packet.getData(), packet.getOffset(), packet.getLength());
-            gui.appendLog("延迟该数据包" + gui.getDelayTime() + " ms，数据包内容如下：" + packetContent);
+            gui.appendLog("延迟该数据包" + delayTime + " ms，数据包内容如下：" + packetContent);
             statistics.computeIfAbsent(packet.getAddress().getHostAddress(), Statistic::new).incrementDelayCount();
             updateGUI();
         }

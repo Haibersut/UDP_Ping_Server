@@ -122,10 +122,15 @@ public class ServerGUI extends JFrame {
         changeLossRateButton.addActionListener(e -> {
             try {
                 int newLossRate = Integer.parseInt(lossRateField.getText());
-                atomicLossRate.set(newLossRate);
-                appendLog("丢包率已更改为" + newLossRate + "%");
+                if (newLossRate < 0 || newLossRate > 100) {
+                    ErrorDialog.showError("丢失率必须大于或等于0");
+                } else {
+                    atomicLossRate.set(newLossRate);
+                    appendLog("丢包率已更改为" + newLossRate + "%");
+                }
             } catch (NumberFormatException ex) {
                 appendLog("丢包率不合法");
+                ErrorDialog.showError("丢失率输入不合法，必须是大于0或小于100的整数");
             }
         });
         getContentPane().add(changeLossRateButton);
@@ -151,10 +156,19 @@ public class ServerGUI extends JFrame {
         changeDelayButton.addActionListener(e -> {
             try {
                 int newDelayTime = Integer.parseInt(delayField.getText());
-                atomicDelay.set(newDelayTime);
-                appendLog("延迟时间已更改为" + newDelayTime + " ms");
+                if (newDelayTime < -1) {
+                    ErrorDialog.showError("延迟时间必须大于或等于-1");
+                } else {
+                    atomicDelay.set(newDelayTime);
+                    if (newDelayTime == -1) {
+                        appendLog("延迟时间已更改为随机时间");
+                    } else {
+                        appendLog("延迟时间已更改为" + newDelayTime + " ms");
+                    }
+                }
             } catch (NumberFormatException ex) {
                 appendLog("延迟时间不合法");
+                ErrorDialog.showError("延迟时间输入不合法，必须是大于或等于-1的整数");
             }
         });
         getContentPane().add(changeDelayButton);
