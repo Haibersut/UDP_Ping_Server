@@ -2,6 +2,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -21,6 +22,8 @@ public class UDPPingServer {
     private AtomicBoolean running;
     private AtomicInteger messageNumber = new AtomicInteger(1);
     private ConcurrentHashMap<String, Statistic> statistics = new ConcurrentHashMap<>();
+    private DatagramSocket prevSocket = null;
+    private ScheduledExecutorService delayedExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public UDPPingServer(int port, int threadPoolSize) {
         executor = Executors.newFixedThreadPool(threadPoolSize);
@@ -68,9 +71,10 @@ public class UDPPingServer {
 
     private DatagramSocket manageSocket(DatagramSocket socket) throws SocketException {
         if (socket == null || socket.getLocalPort() != gui.getPort()) {
-            if (socket != null) {
-                socket.close();
+            if (prevSocket != null) {
+                delayedExecutor.schedule(prevSocket::close, 1, TimeUnit.SECONDS);
             }
+            prevSocket = socket;
             socket = new DatagramSocket(gui.getPort());
         }
         return socket;
@@ -93,7 +97,7 @@ public class UDPPingServer {
                 Thread.currentThread().interrupt();
                 throw new IOException("模拟延迟错误", e);
             }
-            updateGUI();
+
             executor.execute(() -> {
                 try {
                     handlePacket(socket, packet);
@@ -144,11 +148,12 @@ public class UDPPingServer {
         String content = new String(packet.getData(), packet.getOffset(), packet.getLength());
         Map<String, String> map = parsePayload(content);
         statistics.computeIfAbsent(packet.getAddress().getHostAddress(), Statistic::new);
+        updateGUI();
         String headerInfo = "源端口: " + packet.getPort() + ", 目标端口: " + socket.getLocalPort()
-                + ", 长度: " + packet.getLength() + ", 地址: " + packet.getAddress().getHostAddress();
+                + ", 数据长度: " + packet.getLength() + ", 源地址: " + packet.getAddress().getHostAddress() + ", 数据偏移: " + packet.getOffset();
         String message = "第 " + messageNumber.getAndIncrement() + " 条消息\n收到来自 " + packet.getAddress().getHostAddress()
                 + " 地址的消息\n头部信息为："
-                + headerInfo + "\n有效负载为：" + map + "\n";
+                + headerInfo + "\n有效负载为：" + map + "\n实际数据内容：" + Arrays.toString(packet.getData()) + "\n";
         gui.appendMessage(message);
 
         // 发送响应
@@ -174,9 +179,13 @@ public class UDPPingServer {
     public void stop() {
         running.set(false);
         executor.shutdownNow();
+        delayedExecutor.shutdownNow();
         try {
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 System.err.println("线程池没有完全关闭");
+            }
+            if (!delayedExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                System.err.println("延迟执行器没有完全关闭");
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
