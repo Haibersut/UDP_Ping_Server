@@ -140,7 +140,6 @@ func main() {
 
 func showHelp() {
 	fmt.Println("udping [-t] [-n <times>] <ip> <port>")
-	fmt.Println("ChrisL97 梁斯俊 3121009997")
 	fmt.Println("-t : ping continuously until stopped via control-c")
 	fmt.Println("-n 5 : for instance, send 5 pings")
 }
