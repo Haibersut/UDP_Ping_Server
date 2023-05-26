@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 public class PingClient {
@@ -18,26 +19,27 @@ public class PingClient {
         // Retrieve host and port from arguments
         InetAddress host = InetAddress.getByName(args[0]);
         int port = Integer.parseInt(args[1]);
+        //If there is a third parameter, convert it to an integer as the number of pings, otherwise use the default value
         int pingCount = args.length > 2 ? Integer.parseInt(args[2]) : DEFAULT_PING_COUNT;
 
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(MAX_TIMEOUT);
             List<Long> rttList = new ArrayList<>();
-            int received = 0;
-
-            System.out.println("æ­£åœ¨ Ping " + args[0] + ":");
+            //ensure that data inconsistency does not occur when multiple threads access simultaneously
+            AtomicInteger received = new AtomicInteger(0);
+            System.out.println("ÕıÔÚ Ping " + args[0] + ":");
             final long seq = System.currentTimeMillis();
-            for (int i = 0; i < pingCount; i++) {
+            IntStream.range(0, pingCount).forEach(i -> {    //use lambda
                 String payload = String.format("PingUDP %d %d\r\n",seq+i,System.currentTimeMillis());
                 DatagramPacket request = new DatagramPacket(payload.getBytes(StandardCharsets.UTF_8), payload.length(), host, port);
 
                 long start = System.currentTimeMillis();
-                socket.send(request);
-
-                byte[] buffer = new byte[1024];
-                DatagramPacket response = new DatagramPacket(buffer, buffer.length);
-
                 try {
+                    socket.send(request);
+
+                    byte[] buffer = new byte[1024];
+                    DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+
                     socket.receive(response);
                     final int length = response.getLength();
                     String str = new String(buffer,0,length);
@@ -45,29 +47,25 @@ public class PingClient {
                         throw new SocketTimeoutException();
                     long rtt = System.currentTimeMillis() - start;
                     rttList.add(rtt);
-                    received++;
-                    System.out.println(String.format("æ¥è‡ª %s çš„å›å¤: å­—èŠ‚=%d æ—¶é—´=%dms",args[0],length,rtt));
-                } catch (SocketTimeoutException e) {
-                    System.out.println("è¯·æ±‚è¶…æ—¶ã€‚");
+                    received.incrementAndGet();
+                    System.out.println(String.format("À´×Ô %s µÄ»Ø¸´: ×Ö½Ú=%d Ê±¼ä=%dms",args[0],length,rtt));
+                } catch (IOException e) {
+                    System.out.println("ÇëÇó³¬Ê±¡£");
                 }
-            }
+            });
 
             // Calculating statistics
-            System.out.println("\n" + args[0] + " çš„ Ping ç»Ÿè®¡ä¿¡æ¯:");
-            System.out.println(String.format("\tæ•°æ®åŒ…: å·²å‘é€ = %dï¼Œå·²æ¥æ”¶ = %dï¼Œä¸¢å¤± = %d(%d%% ä¸¢å¤±)",pingCount,received,pingCount - received,(pingCount - received) * 100 / pingCount));
+            System.out.println("\n" + args[0] + " µÄ Ping Í³¼ÆĞÅÏ¢:");
+            System.out.println(String.format("\tÊı¾İ°ü: ÒÑ·¢ËÍ = %d£¬ÒÑ½ÓÊÕ = %d£¬¶ªÊ§ = %d(%d%% ¶ªÊ§)",pingCount,received.get(),pingCount - received.get(),(pingCount - received.get()) * 100 / pingCount));
             if (!rttList.isEmpty()) {
                 Collections.sort(rttList);
-                long sum = 0;
-                for (long rtt : rttList) {
-                    sum += rtt;
-                }
-                System.out.println("å¾€è¿”è¡Œç¨‹çš„ä¼°è®¡æ—¶é—´(ä»¥æ¯«ç§’ä¸ºå•ä½):");
-                System.out.println(String.format("\tæœ€çŸ­RTT = %dmsï¼Œæœ€é•¿RTT = %dmsï¼Œå¹³å‡RTT = %dms",rttList.get(0),rttList.get(rttList.size() - 1),(sum / rttList.size())));
+                ////Using streams to calculate the sum of all elements in the round-trip time list
+                long sum = rttList.stream().mapToLong(Long::longValue).sum();
+                System.out.println("Íù·µĞĞ³ÌµÄ¹À¼ÆÊ±¼ä(ÒÔºÁÃëÎªµ¥Î»):");
+                System.out.println(String.format("\t×î¶ÌRTT = %dms£¬×î³¤RTT = %dms£¬Æ½¾ùRTT = %dms",rttList.get(0),rttList.get(rttList.size() - 1),(sum / rttList.size())));
             } else {
-                System.out.println("æ‰€æœ‰æ•°æ®åŒ…å‡å·²ä¸¢å¤±ï¼Œæ— æ³•è®¡ç®— RTT ç»Ÿè®¡ä¿¡æ¯ã€‚");
+                System.out.println("ËùÓĞÊı¾İ°ü¾ùÒÑ¶ªÊ§£¬ÎŞ·¨¼ÆËã RTT Í³¼ÆĞÅÏ¢¡£");
             }
         }
     }
 }
-
-
