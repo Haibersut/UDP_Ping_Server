@@ -95,7 +95,7 @@ public class ServerGUI extends JFrame {
                 }
                 atomicPort.set(newPort);
                 serverInfoLabel.setText("服务器地址: " + getLocalAddress() + "    当前监听端口: " + getPort());  // 更新 JLabel 的内容
-                appendLog("端口已更改为" + newPort);
+                appendLog("端口已更改为" + newPort + "\n");
             } catch (NumberFormatException ex) {
                 ErrorDialog.showError("端口号不合法");
             }
@@ -106,9 +106,9 @@ public class ServerGUI extends JFrame {
         lossCheckbox.setBounds(450, 100, 100, 20);
         lossCheckbox.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
-                appendLog("已启动模拟丢失功能");
+                appendLog("已启动模拟丢失功能\n");
             } else if (e.getStateChange() == ItemEvent.DESELECTED) {
-                appendLog("已关闭模拟丢失功能");
+                appendLog("已关闭模拟丢失功能\n");
             }
         });
         getContentPane().add(lossCheckbox);
@@ -126,10 +126,10 @@ public class ServerGUI extends JFrame {
                     ErrorDialog.showError("丢失率必须大于或等于0");
                 } else {
                     atomicLossRate.set(newLossRate);
-                    appendLog("丢包率已更改为" + newLossRate + "%");
+                    appendLog("丢包率已更改为" + newLossRate + "%\n");
                 }
             } catch (NumberFormatException ex) {
-                appendLog("丢包率不合法");
+                appendLog("丢包率不合法\n");
                 ErrorDialog.showError("丢失率输入不合法，必须是大于0或小于100的整数");
             }
         });
@@ -144,9 +144,9 @@ public class ServerGUI extends JFrame {
         atomicDelay = new AtomicInteger(Integer.parseInt(delayField.getText()));
         delayCheckbox.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
-                appendLog("已启动模拟延迟功能，延迟时间为" + getDelayTime() + " ms");
+                appendLog("已启动模拟延迟功能，延迟时间为" + getDelayTime() + " ms\n");
             } else if (e.getStateChange() == ItemEvent.DESELECTED) {
-                appendLog("已关闭模拟延迟功能");
+                appendLog("已关闭模拟延迟功能\n");
             }
         });
         getContentPane().add(delayField);
@@ -161,13 +161,13 @@ public class ServerGUI extends JFrame {
                 } else {
                     atomicDelay.set(newDelayTime);
                     if (newDelayTime == -1) {
-                        appendLog("延迟时间已更改为随机时间");
+                        appendLog("延迟时间已更改为随机时间\n");
                     } else {
-                        appendLog("延迟时间已更改为" + newDelayTime + " ms");
+                        appendLog("延迟时间已更改为" + newDelayTime + " ms\n");
                     }
                 }
             } catch (NumberFormatException ex) {
-                appendLog("延迟时间不合法");
+                appendLog("延迟时间不合法\n");
                 ErrorDialog.showError("延迟时间输入不合法，必须是大于或等于-1的整数");
             }
         });
