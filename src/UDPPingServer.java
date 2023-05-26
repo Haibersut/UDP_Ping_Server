@@ -37,7 +37,6 @@ public class UDPPingServer {
 
     public void start() {
         initializeGui();
-
         new Thread(() -> {
             DatagramSocket socket = null;
             try {
@@ -159,7 +158,7 @@ public class UDPPingServer {
         gui.appendMessage(message);
 
         // 发送响应
-        byte[] responseBytes = ("回复: " + map).getBytes();
+        byte[] responseBytes = content.getBytes();
         DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length, packet.getAddress(), packet.getPort());
         try {
             socket.send(responsePacket);
