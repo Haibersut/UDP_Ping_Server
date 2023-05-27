@@ -27,9 +27,9 @@ public class PingClient {
             List<Long> rttList = new ArrayList<>();
             //ensure that data inconsistency does not occur when multiple threads access simultaneously
             AtomicInteger received = new AtomicInteger(0);
-            System.out.println("ÕýÔÚ Ping " + args[0] + ":");
+            System.out.println("æ­£åœ¨ Ping " + args[0] + ":");
             final long seq = System.currentTimeMillis();
-            IntStream.range(0, pingCount).forEach(i -> {    //use lambda
+            for (int i=0;i<pingCount;i++){
                 String payload = String.format("PingUDP %d %d\r\n",seq+i,System.currentTimeMillis());
                 DatagramPacket request = new DatagramPacket(payload.getBytes(StandardCharsets.UTF_8), payload.length(), host, port);
 
@@ -48,23 +48,28 @@ public class PingClient {
                     long rtt = System.currentTimeMillis() - start;
                     rttList.add(rtt);
                     received.incrementAndGet();
-                    System.out.println(String.format("À´×Ô %s µÄ»Ø¸´: ×Ö½Ú=%d Ê±¼ä=%dms",args[0],length,rtt));
+                    System.out.printf("æ¥è‡ª %s çš„å›žå¤: å­—èŠ‚=%d æ—¶é—´=%dms%n",args[0],length,rtt);
                 } catch (IOException e) {
-                    System.out.println("ÇëÇó³¬Ê±¡£");
+                    System.out.println("è¯·æ±‚è¶…æ—¶ã€‚");
                 }
-            });
+            }
 
             // Calculating statistics
-            System.out.println("\n" + args[0] + " µÄ Ping Í³¼ÆÐÅÏ¢:");
-            System.out.println(String.format("\tÊý¾Ý°ü: ÒÑ·¢ËÍ = %d£¬ÒÑ½ÓÊÕ = %d£¬¶ªÊ§ = %d(%d%% ¶ªÊ§)",pingCount,received.get(),pingCount - received.get(),(pingCount - received.get()) * 100 / pingCount));
+            System.out.println("\n" + args[0] + " çš„ Ping ç»Ÿè®¡ä¿¡æ¯:");
+            System.out.printf("\tæ•°æ®åŒ…: å·²å‘é€ = %dï¼Œå·²æŽ¥æ”¶ = %dï¼Œä¸¢å¤± = %d(%d%% ä¸¢å¤±)%n",
+                    pingCount,received.get(),
+                    pingCount - received.get(),
+                    (pingCount - received.get()) * 100 / pingCount);
             if (!rttList.isEmpty()) {
-                Collections.sort(rttList);
-                ////Using streams to calculate the sum of all elements in the round-trip time list
+                //ç”¨Java8çš„æ–°ç‰¹æ€§
                 long sum = rttList.stream().mapToLong(Long::longValue).sum();
-                System.out.println("Íù·µÐÐ³ÌµÄ¹À¼ÆÊ±¼ä(ÒÔºÁÃëÎªµ¥Î»):");
-                System.out.println(String.format("\t×î¶ÌRTT = %dms£¬×î³¤RTT = %dms£¬Æ½¾ùRTT = %dms",rttList.get(0),rttList.get(rttList.size() - 1),(sum / rttList.size())));
+                System.out.println("å¾€è¿”è¡Œç¨‹çš„ä¼°è®¡æ—¶é—´(ä»¥æ¯«ç§’ä¸ºå•ä½):");
+                System.out.printf("\tæœ€çŸ­RTT = %dmsï¼Œæœ€é•¿RTT = %dmsï¼Œå¹³å‡RTT = %dms%n",
+                        rttList.stream().max(Long::compareTo).get(),
+                        rttList.stream().min(Long::compareTo).get(),
+                        (sum / rttList.size()));
             } else {
-                System.out.println("ËùÓÐÊý¾Ý°ü¾ùÒÑ¶ªÊ§£¬ÎÞ·¨¼ÆËã RTT Í³¼ÆÐÅÏ¢¡£");
+                System.out.println("æ‰€æœ‰æ•°æ®åŒ…å‡å·²ä¸¢å¤±ï¼Œæ— æ³•è®¡ç®— RTT ç»Ÿè®¡ä¿¡æ¯ã€‚");
             }
         }
     }
